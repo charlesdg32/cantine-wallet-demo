@@ -1,6 +1,6 @@
-# La Cantine — version 8 connectée
+# La Cantine — version 9 connectée
 
-Cette mise à jour rétablit l’espace connecté autour des comptes Supabase : QR personnel vérifié côté serveur, accès aux onglets selon le rôle, ventes enregistrées par Supabase, recharges avec justificatif privé, produits et historique. Les anciens fichiers restent dans le paquet v7 ; utilisez ce dossier v8 pour la mise à jour.
+Cette mise à jour corrige le bouton Pas encore inscrit : il ouvre maintenant le formulaire de demande. Le formulaire exige le prénom et le nom, puis transmet le nom au profil Supabase pour que l’administrateur puisse reconnaître le demandeur. Elle rétablit aussi l’espace connecté autour des comptes Supabase : QR personnel vérifié côté serveur, accès aux onglets selon le rôle, ventes enregistrées par Supabase, recharges avec justificatif privé, produits et historique. Les anciens fichiers restent dans le paquet v7 ; utilisez ce dossier v9 pour la mise à jour.
 
 ## Avant de remplacer les fichiers du site
 
