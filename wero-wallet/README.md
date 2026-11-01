@@ -1,29 +1,29 @@
-# La Cantine — version 9 connectée
+# La Cantine — version 10 connectée
 
-Cette mise à jour corrige le bouton Pas encore inscrit : il ouvre maintenant le formulaire de demande. Le formulaire exige le prénom et le nom, puis transmet le nom au profil Supabase pour que l’administrateur puisse reconnaître le demandeur. Elle rétablit aussi l’espace connecté autour des comptes Supabase : QR personnel vérifié côté serveur, accès aux onglets selon le rôle, ventes enregistrées par Supabase, recharges avec justificatif privé, produits et historique. Les anciens fichiers restent dans le paquet v7 ; utilisez ce dossier v9 pour la mise à jour.
+Cette mise à jour corrige le refus des QR des adhérents simples. Être « Membre actif » donne le droit de tenir la caisse ; cela ne doit pas conditionner l’usage du portefeuille. Le code adhérent est aussi de nouveau affiché sous le QR.
 
-## Avant de remplacer les fichiers du site
+Le bouton « Pas encore inscrit ? » ouvre le formulaire de demande. Le prénom et le nom sont obligatoires et transmis au profil Supabase.
 
-1. Dans Supabase, ouvrez **SQL Editor → New query**.
-2. Copiez le contenu de `supabase/qr_roles_live_migration.sql`, puis cliquez sur **Run**. La migration ajoute les fonctions QR sécurisées, les droits de lecture nécessaires à la caisse et le bucket privé des reçus.
-3. Attendez le message **Success**. En cas d’erreur, arrêtez-vous et transmettez le texte de l’erreur sans publier de clé ou de mot de passe.
-4. Dans GitHub, entrez dans `wero-wallet` et remplacez son contenu par celui de ce dossier v8. Conservez les variables Cloudflare existantes `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`.
-5. Validez le changement GitHub et attendez le déploiement vert sur Cloudflare Pages.
-6. Déconnectez-vous puis reconnectez-vous. La connexion crée un QR neuf ; tout ancien QR est invalidé à chaque nouvelle connexion ou renouvellement.
+## Mise à jour du site
+
+1. Dans Supabase, ouvre **SQL Editor → New query**.
+2. Copie le contenu de `supabase/qr_member_access_fix.sql` dans l’éditeur, puis clique sur **Run**. Cette correction ne supprime aucune donnée ; elle met à jour la vérification QR et l’enregistrement d’une vente.
+3. Attends **Success**. Si tu n’as jamais exécuté `qr_roles_live_migration.sql` de la version 8, exécute-le d’abord.
+4. Dans GitHub, entre dans `wero-wallet` et remplace son contenu par les fichiers de la version 10. Garde les variables Cloudflare `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`.
+5. Valide les changements dans GitHub et attends le déploiement vert de Cloudflare Pages.
+6. Déconnecte-toi et reconnecte-toi sur le compte qui porte le QR. Scanne le nouveau code depuis un compte **Membre actif**, **Trésorier** ou **Administrateur**.
 
 ## Rôles
 
-- **Adhérent** : compte, solde, historique et QR personnel.
-- **Membre actif** : accès adhérent et caisse.
-- **Trésorier** : accès membre actif, demandes de recharge et tableau de suivi.
-- **Administrateur** : accès complet, gestion des rôles, produits et journal d’audit.
+- **Adhérent** : compte, solde, historique et QR utilisable à la caisse.
+- **Membre actif** : accès adhérent et outils de vente.
+- **Trésorier** : ventes, demandes de recharge et suivi de trésorerie.
+- **Administrateur** : gestion du site, des comptes, des rôles et des produits.
 
-Attribuez les rôles depuis **Administration → Adhérents**. Un compte doit aussi être approuvé pour se connecter. Le scanner nécessite une page HTTPS et l’autorisation d’utiliser la caméra. Si le navigateur ne prend pas en charge son scanner QR, la recherche par nom reste disponible.
+Les comptes doivent être approuvés. Le scanner nécessite une page HTTPS et l’autorisation de la caméra.
 
 ## Sécurité et limites
 
-Le token QR clair n’est jamais stocké dans la base : Supabase ne garde que son empreinte. Une connexion ou un renouvellement crée un QR différent et invalide l’ancien. Les débits sont validés dans la fonction SQL `cashier_debit`; les soldes ne sont pas modifiés directement depuis le navigateur.
+Supabase stocke une empreinte du secret QR, pas le secret en clair. Une reconnexion crée un QR neuf et invalide le précédent. Les reçus sont déposés dans un bucket privé. Cette version reste un essai interne : avant tout usage financier réel, faites examiner les règles d’accès, le rapprochement et les sauvegardes.
 
-Les reçus sont déposés dans un bucket Supabase privé avec accès limité. Le tableau de trésorerie distingue les recharges approuvées et les ventes ; il ne prétend pas calculer le bénéfice comptable réel. Cette version reste un essai interne : avant tout usage financier réel, faites examiner les règles RLS, la procédure de rapprochement et la sauvegarde des données.
-
-N’ajoutez jamais une clé `service_role` dans Cloudflare Pages ou dans le code du navigateur. Les identifiants Brevo restent dans la configuration SMTP Supabase, pas dans GitHub.
+N’ajoute jamais une clé `service_role` dans Cloudflare Pages ou dans le code du navigateur. Les identifiants Brevo restent dans la configuration SMTP Supabase, pas dans GitHub.
