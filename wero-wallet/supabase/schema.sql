@@ -26,15 +26,14 @@ create table public.wallets (
   updated_at timestamptz not null default now()
 );
 
--- Every Supabase Auth account receives a least-privilege member profile and empty wallet.
--- Staff roles must be assigned separately by a trusted administrator.
+-- Every self-signup receives a pending Adhérent profile and empty wallet.
 create or replace function public.provision_new_auth_user()
 returns trigger language plpgsql security definer set search_path = '' as $$
 declare v_name text;
 begin
   v_name := coalesce(nullif(trim(new.raw_user_meta_data->>'display_name'), ''), split_part(new.email, '@', 1));
   insert into public.profiles(id, display_name, email, role, membership_status, active)
-    values(new.id, v_name, new.email, 'member', 'simple', true);
+    values(new.id, v_name, new.email, 'member', 'simple', false);
   insert into public.wallets(member_id) values(new.id);
   return new;
 end $$;
@@ -134,7 +133,7 @@ declare
   v_label text;
 begin
   v_role := public.current_role();
-  if v_role not in ('cashier','admin') then raise exception 'forbidden'; end if;
+  if v_role not in ('cashier','treasurer','admin') then raise exception 'forbidden'; end if;
   if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) not between 1 and 30 then raise exception 'invalid cart'; end if;
   -- Lock wallet first so simultaneous sales cannot overspend the same balance.
   select w.balance_cents into v_balance from public.wallets w
@@ -187,29 +186,38 @@ begin
         'approved_by',(select auth.uid()),'amount_cents',v_req.amount_cents,'note',p_note));
 end $$;
 
--- Only administrators can change a member's eligibility status. The action is audited.
-create or replace function public.admin_set_membership_status(
+-- Admin-only role assignment and approval, with an audit record.
+create or replace function public.admin_set_member_access(
   p_member_id uuid,
-  p_status public.membership_status
+  p_role public.app_role,
+  p_active boolean
 )
 returns void language plpgsql security definer set search_path = '' as $$
-declare v_previous public.membership_status;
+declare v_previous_role public.app_role; v_previous_active boolean;
 begin
   if public.current_role() <> 'admin' then raise exception 'forbidden'; end if;
-  select membership_status into v_previous from public.profiles where id=p_member_id for update;
+  if p_member_id=(select auth.uid()) and (p_role <> 'admin' or not p_active) then
+    raise exception 'cannot remove your own admin access';
+  end if;
+  select role,active into v_previous_role,v_previous_active from public.profiles where id=p_member_id for update;
   if not found then raise exception 'profile not found'; end if;
-  update public.profiles set membership_status=p_status where id=p_member_id;
+  update public.profiles
+    set role=p_role,
+        membership_status=case when p_role='member' then 'simple'::public.membership_status else 'active'::public.membership_status end,
+        active=p_active
+    where id=p_member_id;
   insert into public.audit_logs(actor_id,action,subject_id,details)
-    values((select auth.uid()),'membership_status_changed',p_member_id,
-      jsonb_build_object('previous_status',v_previous,'new_status',p_status));
+    values((select auth.uid()),'member_access_changed',p_member_id,
+      jsonb_build_object('previous_role',v_previous_role,'new_role',p_role,
+        'previous_active',v_previous_active,'new_active',p_active));
 end $$;
 
 revoke all on function public.cashier_debit(uuid,jsonb) from public;
 grant execute on function public.cashier_debit(uuid,jsonb) to authenticated;
 revoke all on function public.review_topup(uuid,boolean,text) from public;
 grant execute on function public.review_topup(uuid,boolean,text) to authenticated;
-revoke all on function public.admin_set_membership_status(uuid,public.membership_status) from public;
-grant execute on function public.admin_set_membership_status(uuid,public.membership_status) to authenticated;
+revoke all on function public.admin_set_member_access(uuid,public.app_role,boolean) from public;
+grant execute on function public.admin_set_member_access(uuid,public.app_role,boolean) to authenticated;
 
 -- Provisioning/invitations and QR secret rotation belong in trusted Edge Functions:
 -- use Supabase Auth inviteUserByEmail, verify caller role, create profile+wallet,
