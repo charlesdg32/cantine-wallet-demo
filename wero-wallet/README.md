@@ -19,6 +19,7 @@ Ouvrez l’URL locale indiquée par Vite. Le sélecteur « Mode de démonstratio
 - Caisse : recherche ou scan d’un QR, articles, quantités, total et refus si le solde démo est insuffisant.
 - Recharges : envoi d’un montant et nom de justificatif ; le crédit ne s’applique qu’après approbation simulée.
 - Administration : invitation fictive, rôles, activation du catalogue et ajout d’articles.
+- En mode connecté, l’onglet Administration → Adhérents affiche en lecture seule les profils de test créés dans Supabase Auth (nom, e-mail, statut et rôle). Les mots de passe ne sont jamais accessibles depuis cette liste.
 - Statut d’adhérent séparé du rôle : « membre actif » permet de payer à la caisse ; le rôle « caisse » autorise l’encaissement.
 - Journal qui précise l’adhérent concerné, le demandeur de recharge, le trésorier approbateur et le caissier.
 - Vue trésorerie avec recettes, dépenses et résultat net mensuels illustratifs.
