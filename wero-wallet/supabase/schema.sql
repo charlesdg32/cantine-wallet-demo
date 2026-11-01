@@ -25,6 +25,22 @@ create table public.wallets (
   qr_revoked_at timestamptz,
   updated_at timestamptz not null default now()
 );
+
+-- Every Supabase Auth account receives a least-privilege member profile and empty wallet.
+-- Staff roles must be assigned separately by a trusted administrator.
+create or replace function public.provision_new_auth_user()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare v_name text;
+begin
+  v_name := coalesce(nullif(trim(new.raw_user_meta_data->>'display_name'), ''), split_part(new.email, '@', 1));
+  insert into public.profiles(id, display_name, email, role, membership_status, active)
+    values(new.id, v_name, new.email, 'member', 'simple', true);
+  insert into public.wallets(member_id) values(new.id);
+  return new;
+end $$;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.provision_new_auth_user();
 create table public.products (
   id uuid primary key default gen_random_uuid(),
   name text not null,
