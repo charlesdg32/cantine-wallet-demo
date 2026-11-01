@@ -1,62 +1,31 @@
-# La Cantine — prototype portefeuille cashless
+# La Cantine — essai interne
 
-PWA de démonstration pour une association : portefeuille adhérent, QR permanent révocable, encaissement, demandes de recharge, catalogue, rôles et historique. **Le mode de démonstration est activé par défaut** : les données sont fictives et enregistrées dans le stockage local du navigateur. Il ne traite aucun paiement et n’est pas destiné à une mise en production en l’état.
+Cette version sert à tester les **demandes de compte et les rôles** avec 2 ou 3 personnes réelles. Les noms et comptes de démonstration ont été retirés. Une demande contient le nom et prénom, l’adresse e-mail et le mot de passe choisis par la personne. Le mot de passe est géré par Supabase Auth ; l’association ne peut pas le consulter.
 
-## Lancer le prototype
+## Ce qui est actif dans l’essai
 
-Prérequis : Node.js 20 ou plus récent.
+- Inscription avec nom, adresse e-mail et mot de passe.
+- Confirmation d’adresse si elle est activée dans Supabase.
+- Comptes créés en attente jusqu’à approbation d’un administrateur.
+- Attribution des rôles Adhérent, Membre actif, Trésorier et Administrateur.
+- Les demandes réelles apparaissent dans Administration → Adhérents.
 
-```bash
-npm install
-npm run dev
-```
+## Limite importante
 
-Ouvrez l’URL locale indiquée par Vite. Le sélecteur « Mode de démonstration » simule les profils adhérent, caisse, trésorerie et administration. Les opérations sont conservées dans le navigateur ; « Réinitialiser les données du site » rétablit les exemples. Le scan caméra fonctionne seulement dans un contexte sécurisé (HTTPS ou localhost) et un navigateur compatible. La recherche par nom/code reste disponible.
+Le portefeuille, les QR codes, les ventes, les recharges, les reçus et les graphiques ne sont **pas encore connectés aux tables Supabase**. Ils ne sont donc pas disponibles dans l’essai connecté. N’utilisez pas cette version pour enregistrer des ventes ou des mouvements d’argent. La base comporte des fonctions SQL prévues pour certaines opérations, mais l’application ne les utilise pas encore toutes ; le backend complet doit être raccordé et revu avant un pilote financier.
 
-## Fonctionnalités montrées
+## Mise à jour sur Cloudflare Pages
 
-- Solde et QR adhérent permanent ; QR révocable depuis le profil.
-- Caisse : recherche ou scan d’un QR, articles, quantités, total et refus si le solde démo est insuffisant.
-- Recharges : envoi d’un montant et nom de justificatif ; le crédit ne s’applique qu’après approbation simulée.
-- Administration : invitation fictive, rôles, activation du catalogue et ajout d’articles.
-- Quatre rôles connectés : Adhérent (QR et compte), Membre actif (QR, compte et ventes), Trésorier (fonctions du membre actif et trésorerie), Administrateur (tous les onglets et gestion).
-- Les demandes d’inscription se font par e-mail et mot de passe. Elles restent bloquées jusqu’à approbation par un administrateur; le mot de passe n’est jamais visible par l’association.
-- En mode connecté, Administration → Adhérents permet à l’admin d’approuver les demandes et d’attribuer les rôles. Les changements sont inscrits au journal d’audit.
-- Journal qui précise l’adhérent concerné, le demandeur de recharge, le trésorier approbateur et le caissier.
-- Vue trésorerie avec recettes, dépenses et résultat net mensuels illustratifs.
+1. Décompressez cette archive.
+2. Dans GitHub, ouvrez le dépôt `cantine-wallet-demo`, entrez dans `wero-wallet`, puis téléversez le contenu du dossier `wero-wallet-auth-update` en remplaçant les fichiers existants (gardez `wero-wallet` comme dossier racine du projet).
+3. Validez le commit. Cloudflare Pages redéploiera le site automatiquement.
+4. Ouvrez le site et créez d’abord une demande pour vous-même si nécessaire. Dans Supabase, confirmez votre adresse, puis attribuez-vous le rôle administrateur avec la procédure déjà utilisée.
+5. Faites inscrire les 2 ou 3 testeurs eux-mêmes. Vérifiez leurs noms et adresses, puis approuvez chaque compte et choisissez son rôle dans Administration → Adhérents.
 
-Le mode démo n’est pas une simulation de sécurité : les rôles se changent dans l’interface et le stockage peut être modifié par l’utilisateur. N’y mettez ni données personnelles réelles, ni reçus, ni argent réel.
+Pour créer un nouveau compte interne, la personne doit demander l’accès sur le site avec son adresse réelle. Ne partagez pas de mot de passe par message.
 
-## Connecter Supabase (travail à faire avant toute mise en service)
+## Paramètres Supabase et Cloudflare
 
-1. Créez un projet Supabase de test et gardez les clés et reçus entièrement fictifs.
-2. Exécutez [`supabase/schema.sql`](supabase/schema.sql) dans le SQL Editor. Faites relire les politiques RLS et fonctions par un développeur avant tout déploiement.
-   Pour un projet déjà créé, exécutez [`supabase/roles_signup_migration.sql`](supabase/roles_signup_migration.sql) une fois dans le SQL Editor. Ce script conserve les rôles actuels, met à jour les règles d’accès aux ventes et place les nouvelles inscriptions en attente.
-3. Dans Supabase Auth, activez les nouvelles inscriptions par e-mail. Dans URL Configuration, définissez le Site URL sur `https://cantine-wallet-demo.pages.dev` et ajoutez cette même adresse aux URL de redirection autorisées. Si la confirmation d’e-mail est activée, l’inscrit devra confirmer son adresse avant de demander l’approbation.
-4. Pour transformer votre propre compte en premier administrateur, utilisez le SQL Editor avec votre adresse exacte : `update public.profiles set role = 'admin', active = true, membership_status = 'active' where email = 'VOTRE_EMAIL';`. Faites cette opération uniquement dans votre projet privé et avec votre adresse.
-5. Dans Cloudflare Workers & Pages → votre Worker → Settings → Variables and Secrets (ou Build variables selon l’écran), ajoutez `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`, puis redéployez. Ce sont les seules valeurs publiques nécessaires au navigateur. Ne placez jamais la clé `service_role` dans le navigateur ni dans une variable `VITE_`.
-6. En local, copiez `.env.example` vers `.env.local`, renseignez ces mêmes deux variables, puis relancez `npm run dev`. Sans les variables, l’app affiche un écran verrouillé avec les étapes de configuration. Avec elles, Supabase vérifie l’e-mail et le mot de passe, puis l’app contrôle que le profil associé est actif avant d’ouvrir l’interface.
-7. **La connexion Supabase est réelle, mais les écrans du portefeuille utilisent encore les données fictives du navigateur.** Le rôle vérifié masque le sélecteur de rôle démo, mais les écritures et soldes affichés ne sont pas encore ceux du compte Supabase. Ne mettez pas cette version en service pour les opérations réelles.
-8. Avant usage, remplacer `src/store.js` par les lectures/écritures du backend. Implémenter des Edge Functions protégées pour inviter un adhérent, attribuer les rôles, créer/renouveler/révoquer le secret QR et produire un upload signé de justificatif; restreindre les reçus dans un bucket privé.
-9. L’API prévue appelle `cashier_debit(member_id, items)` avec uniquement les ID de produits et quantités. La fonction verrouille le portefeuille, recalcule les prix depuis la base, contrôle le solde et écrit débit, lignes et audit dans une seule transaction SQL. Ne jamais envoyer un total client faisant autorité.
-10. La trésorerie appelle `review_topup(request_id, approve, note)`. La demande est verrouillée et le portefeuille crédité au plus une fois, dans la transaction de la fonction.
-11. Tester les rôles et les accès avec des comptes séparés (adhérent, membre actif, trésorier, administrateur), les erreurs concurrentes et les tentatives de modification directe, sur un projet de préproduction.
+Conservez les deux variables publiques déjà définies dans Cloudflare : `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`. N’ajoutez jamais la clé `service_role` au site. Dans Supabase Auth, l’inscription par e-mail doit être activée et l’URL `https://cantine-wallet-demo.pages.dev` autorisée dans les redirections.
 
-Le SQL initialise les profils, portefeuilles, produits, demandes, transactions, détails de vente et journal d’audit. Les soldes et écritures ne sont pas modifiables directement par les clients. Les secrets QR doivent être générés avec une source aléatoire cryptographique, conservés sous forme de hash en base et transmis au membre seulement selon un parcours sûr. Un scan doit résoudre le secret côté serveur et vérifier l’adhérent actif. Le QR d’exemple du front est un simple code démo et ne doit pas être réutilisé en production.
-
-## Construire et héberger
-
-```bash
-npm run build
-```
-
-Le dossier `dist/` peut être hébergé sur une offre statique gratuite (par exemple Cloudflare Pages, Netlify ou Vercel). Configurez le répertoire de sortie `dist` et les variables publiques Supabase uniquement après revue du backend. Toute offre gratuite peut changer ses limites et conditions. Ajoutez une règle de réécriture vers `index.html` si l’hébergeur la demande. Le service worker et le cache hors ligne ne sont pas activés dans ce prototype ; ne mettez pas en cache les appels d’authentification, soldes ou reçus.
-
-## Sécurité et revue avant usage réel
-
-- La valeur est un crédit interne tenu par l’association, pas un compte bancaire ni un moyen de paiement Wero. Le nom Wero ne désigne pas une intégration Wero.
-- Clarifier avec l’association et ses conseils les obligations applicables (comptabilité, remboursements, conservation, protection des données et responsabilités).
-- Revue indépendante du SQL/RLS, tests d’autorisation, sauvegardes et plan de restauration, limitation de débit et supervision des Edge Functions.
-- Vérifier l’identité des caissiers et trésoriers, procédure de retrait des rôles, journalisation protégée contre les modifications, politique de conservation et accès aux reçus.
-- Prévoir une procédure d’annulation/correction traçable ; ne pas effacer une vente financièrement pertinente.
-- Le prototype n’a pas été connecté à Supabase ni audité. Il sert à valider le parcours et l’ergonomie, pas à déployer des fonds réels.
+L’URL de site affichée par Cloudflare est `https://cantine-wallet-demo.pages.dev`.
