@@ -43,6 +43,7 @@ create trigger on_auth_user_created
 create table public.products (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  emoji text not null default '☕',
   price_cents integer not null check (price_cents > 0),
   active boolean not null default true,
   created_at timestamptz not null default now()
